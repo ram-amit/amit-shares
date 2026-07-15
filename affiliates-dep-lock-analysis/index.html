@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Affiliates DEP 2-Day Lock — Diagnostic Analysis</title>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --surface: #fff;
+      --text: #323338;
+      --muted: #676879;
+      --border: #d0d4e4;
+      --accent: #5034ff;
+      --accent-soft: #ede9ff;
+      --warn: #c27803;
+      --warn-soft: #fff4e0;
+      --danger: #d83a52;
+      --danger-soft: #ffe6ea;
+      --ok: #00854d;
+      --ok-soft: #e6f4ed;
+      --radius: 10px;
+      --font: "Figtree", "Segoe UI", system-ui, sans-serif;
+      --mono: "SF Mono", "Fira Code", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.55; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 32px;
+    }
+    header h1 { font-size: 1.45rem; font-weight: 700; }
+    header p { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+    .meta { font-size: 0.8rem; color: var(--muted); margin-top: 10px; }
+    .meta a { color: var(--accent); }
+
+    nav {
+      display: flex; gap: 8px; padding: 14px 32px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 99; overflow-x: auto;
+    }
+    nav button {
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--muted); padding: 9px 16px; border-radius: 8px;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600; white-space: nowrap;
+    }
+    nav button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    main { max-width: 1080px; margin: 0 auto; padding: 28px 32px 80px; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .tldr {
+      background: linear-gradient(135deg, #6161ff 0%, #5034ff 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+    .tldr h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; margin-bottom: 8px; }
+    .tldr p { font-size: 0.95rem; }
+    .tldr b { font-weight: 700; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 20px;
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 14px; }
+    .card h3 {
+      font-size: 0.72rem; color: var(--muted); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; margin-top: 18px;
+    }
+    .card h3:first-of-type { margin-top: 0; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .stat {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat .num { font-size: 1.6rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
+    .stat .num.ok { color: var(--ok); }
+    .stat .num.warn { color: var(--warn); }
+    .stat .num.bad { color: var(--danger); }
+    .stat .lbl { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 700; }
+    td.num { font-family: var(--mono); font-size: 0.84rem; }
+    tr:last-child td { border-bottom: none; }
+
+    .pill {
+      display: inline-block; font-size: 0.72rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px;
+    }
+    .pill.ok { background: var(--ok-soft); color: var(--ok); }
+    .pill.warn { background: var(--warn-soft); color: var(--warn); }
+    .pill.bad { background: var(--danger-soft); color: var(--danger); }
+
+    .callout {
+      border-radius: 8px; padding: 14px 16px; font-size: 0.88rem; margin: 14px 0;
+    }
+    .callout.ok { background: var(--ok-soft); border: 1px solid #b8e6cc; }
+    .callout.warn { background: var(--warn-soft); border: 1px solid #ffe0a3; }
+    .callout.bad { background: var(--danger-soft); border: 1px solid #f5b8c0; }
+    .callout .t { font-weight: 700; margin-bottom: 4px; }
+
+    .flow {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 18px; background: #fafbff; border-radius: var(--radius);
+      border: 1px solid var(--border); margin: 14px 0;
+    }
+    .flow-box {
+      padding: 10px 14px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.82rem; font-weight: 600; text-align: center;
+    }
+    .flow-box.hl { border-color: var(--accent); background: var(--accent-soft); }
+    .flow-arrow { color: var(--muted); }
+
+    ul, ol { padding-left: 20px; font-size: 0.9rem; }
+    li { margin-bottom: 8px; }
+    p { font-size: 0.9rem; margin-bottom: 12px; }
+    code { font-family: var(--mono); font-size: 0.82rem; background: var(--bg); padding: 2px 6px; border-radius: 4px; }
+
+    .seq-table td:first-child { font-weight: 600; white-space: nowrap; }
+
+    @media (max-width: 768px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      main, header, nav { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Affiliates DEP 2-Day Lock — Diagnostic Analysis</h1>
+    <p>Snowflake validation following the Jul 15 DEP Changes Sync with Growth Marketing Affiliates</p>
+    <div class="meta">
+      Author: Amit Ram · Jul 15, 2026 ·
+      <a href="https://monday.monday.com/product_view/notetaker/meetings-page-product-view/summaries/c08da2a1-44c4-4fe0-bca5-f5a84fb22c38">Meeting notes</a>
+    </div>
+  </header>
+
+  <nav>
+    <button class="active" data-tab="summary">Summary</button>
+    <button data-tab="findings">Findings</button>
+    <button data-tab="examples">Examples</button>
+    <button data-tab="causes">Root causes</button>
+    <button data-tab="actions">Next steps</button>
+  </nav>
+
+  <main>
+    <section id="summary" class="section active">
+      <div class="tldr">
+        <h2>TL;DR</h2>
+        <p>
+          Affiliates report daily DEP volatility after the 2-day lock window, blocking partner payments and campaign optimization (Natowen ~$1M-$1.5M/mo).
+          <b>Snowflake shows the lock column is frozen correctly today</b> for mature entities (CM lock = L3 day-2 score, 12,579/12,580 match).
+          The most likely explanation is <b>partners seeing unlocked DEP</b> or <b>full re-exports mixing entities still in the 0-2 day lock window</b>, not a broken lock implementation.
+          Cannot prove historical lock mutation (no CM time travel). Need affiliate user IDs + export pipeline audit to close.
+        </p>
+      </div>
+
+      <div class="grid-4">
+        <div class="stat"><div class="num ok">0</div><div class="lbl">L3 day-2 rescores (60d)</div></div>
+        <div class="stat"><div class="num ok">99.99%</div><div class="lbl">CM lock = L3 day-2 (NI)</div></div>
+        <div class="stat"><div class="num warn">16%</div><div class="lbl">Lock vs unlocked diff &gt;$5 (age 5+)</div></div>
+        <div class="stat"><div class="num warn">18.8%</div><div class="lbl">July NI still in lock window</div></div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h2>Issue context (from call)</h2>
+        <ul>
+          <li>Partners (Natowen + others) receive DEP via daily reports, up to 8x/day. Each report re-exports all month-to-date events.</li>
+          <li>Payment model: 80% fixed + 20% tied to DEP performance. Entities with <code>DEP &gt;= $18</code> are payable (cap $1,000).</li>
+          <li>Field used: <code>PREDICTED_FIRST_ARR_2_DAYS_LOCK</code> (DEP2 lock). Partners expect it to freeze after 48h.</li>
+          <li>Reported behavior: same user ID shows different DEP day-over-day after day 2 (e.g. DEP=2 on Jul 12, DEP=4 on Jul 13).</li>
+          <li>No DEP model version change since mid-June. Treated as technical, not intentional rollout.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Decision flow (updated after diagnostics)</h2>
+        <div class="flow">
+          <div class="flow-box">Partner sees DEP changing</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Which column?</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box hl">2_DAYS_LOCK</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Entity age ≥ 3?</div>
+        </div>
+        <div class="flow">
+          <div class="flow-box warn" style="border-color:var(--warn);background:var(--warn-soft)">No: lock window (expected movement)</div>
+          <span class="flow-arrow">|</span>
+          <div class="flow-box hl">Yes: lock frozen in CM today</div>
+          <span class="flow-arrow">→</span>
+          <div class="flow-box">Likely wrong column or re-export design</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="findings" class="section">
+      <div class="card">
+        <h2>A. Is the lock column frozen at day 2?</h2>
+        <span class="pill ok">Confirmed in current CM state</span>
+        <table style="margin-top:14px">
+          <thead><tr><th>Check</th><th>Result</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>L3: same entity rescored multiple times at days=2</td><td class="num">0 cases (60d, all channels)</td><td><span class="pill ok">Pass</span></td></tr>
+            <tr><td>CM lock vs L3 day-2 (Natowen, 30d)</td><td class="num">12,579 / 12,580 match (avg diff $0.01)</td><td><span class="pill ok">Pass</span></td></tr>
+            <tr><td>Entities age 3-4: CM lock = L3 day-2</td><td class="num">485 / 485</td><td><span class="pill ok">Pass</span></td></tr>
+          </tbody>
+        </table>
+        <div class="callout ok"><div class="t">Conclusion</div><code>PREDICTED_FIRST_ARR_2_DAYS_LOCK</code> correctly snapshots the L3 day-2 score. Not recomputed on each CM run for mature entities.</div>
+      </div>
+
+      <div class="card">
+        <h2>B. Lock vs unlocked divergence (age 5+, Natowen, 30d)</h2>
+        <div class="grid-3" style="margin-bottom:16px">
+          <div class="stat"><div class="num">12,144</div><div class="lbl">Entities age 5+</div></div>
+          <div class="stat"><div class="num ok">66%</div><div class="lbl">Lock within $1 of unlocked</div></div>
+          <div class="stat"><div class="num warn">16%</div><div class="lbl">Lock differs &gt;$5 from unlocked</div></div>
+        </div>
+        <h3>Payable threshold ($18) flips (age 10+)</h3>
+        <table>
+          <thead><tr><th>Metric</th><th>Count</th></tr></thead>
+          <tbody>
+            <tr><td>Payable on lock (DEP ≥ $18)</td><td class="num">782</td></tr>
+            <tr><td>Payable on unlocked</td><td class="num">348</td></tr>
+            <tr><td>Payable status flipped between lock and unlocked</td><td class="num">541 (6%)</td></tr>
+            <tr><td>Would newly pay on unlocked (lock &lt; $18, unlocked ≥ $18)</td><td class="num">53</td></tr>
+            <tr><td>Would stop paying on unlocked (lock ≥ $18, unlocked &lt; $18)</td><td class="num">488</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><div class="t">Risk</div>If export uses unlocked DEP, payable status and optimization signals change dramatically for 6% of mature entities.</div>
+      </div>
+
+      <div class="card">
+        <h2>C. Lock window still active (expected movement)</h2>
+        <h3>July Natowen cohort</h3>
+        <table>
+          <thead><tr><th>Bucket</th><th>Count</th><th>%</th></tr></thead>
+          <tbody>
+            <tr><td>Still in 0-2 day lock window</td><td class="num">1,289</td><td class="num">18.8%</td></tr>
+            <tr><td>Age 3-4</td><td class="num">485</td><td class="num">7.1%</td></tr>
+            <tr><td>Age 5+</td><td class="num">5,079</td><td class="num">74.1%</td></tr>
+            <tr><td>Missing lock despite age 2+</td><td class="num">10</td><td class="num">~0%</td></tr>
+          </tbody>
+        </table>
+        <h3>L3 unlocked movement (last 14d NI cohort)</h3>
+        <table>
+          <thead><tr><th>Transition</th><th>Entities with &gt;$1 change</th></tr></thead>
+          <tbody>
+            <tr><td>Day 1 → Day 2</td><td class="num">1,062 / 5,421 (20%)</td></tr>
+            <tr><td>Day 2 → Day 3</td><td class="num">725 / 5,366 (13.5%)</td></tr>
+            <tr><td>Payable flip day 2 → day 3</td><td class="num">63</td></tr>
+          </tbody>
+        </table>
+        <p>With 8 exports/day and full month re-exports, ~19% of July signups still have legitimately moving values.</p>
+      </div>
+
+      <div class="card">
+        <h2>D. What we could not verify</h2>
+        <div class="callout bad">
+          <div class="t">CM time travel unavailable</div>
+          Cannot prove whether <code>PREDICTED_FIRST_ARR_2_DAYS_LOCK</code> changed 3 days ago vs today for the same entity on <code>FACT_CAMPAIGN_MONITORING_DWH</code>.
+        </div>
+        <div class="callout warn">
+          <div class="t">Natowen export pipeline not validated</div>
+          Reconstructed query uses <code>predicted_first_arr_2_days_lock</code>. Actual hourly export to partners not confirmed in warehouse.
+        </div>
+      </div>
+    </section>
+
+    <section id="examples" class="section">
+      <div class="card">
+        <h2>Entity 35710010 — lock stable, unlocked surged</h2>
+        <p><code>pulse_account_id</code> 35710010 · signup Jun 23, 2026 · Natowen</p>
+        <table class="seq-table">
+          <thead><tr><th>Entity age</th><th>L3 ARR (unlocked)</th><th>CM lock</th><th>Payable ($18)?</th></tr></thead>
+          <tbody>
+            <tr><td>Day 2</td><td class="num">9.0</td><td class="num">9.0</td><td>No</td></tr>
+            <tr><td>Day 10</td><td class="num">45.5</td><td class="num">9.0</td><td>No</td></tr>
+            <tr><td>Day 14</td><td class="num">1,126.6</td><td class="num">9.0</td><td>Yes (if unlocked)</td></tr>
+            <tr><td>Day 21</td><td class="num">1,531.5</td><td class="num">9.0</td><td>Yes (if unlocked)</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><div class="t">Pattern</div>Lock frozen at $9. Unlocked moved 9 → 1,531. If partner compares unlocked across daily exports, it looks like daily DEP drift.</div>
+      </div>
+
+      <div class="card">
+        <h2>Entity 35701246 — day-2 spike locked in</h2>
+        <p><code>pulse_account_id</code> 35701246 · signup Jun 22, 2026</p>
+        <table class="seq-table">
+          <thead><tr><th>Entity age</th><th>L3 ARR (unlocked)</th><th>CM lock</th></tr></thead>
+          <tbody>
+            <tr><td>Day 1</td><td class="num">4,701</td><td class="num">—</td></tr>
+            <tr><td>Day 2</td><td class="num">7,483</td><td class="num">7,483</td></tr>
+            <tr><td>Day 5</td><td class="num">869</td><td class="num">7,483</td></tr>
+            <tr><td>Day 22</td><td class="num">2,023</td><td class="num">7,483</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn"><div class="t">Pattern</div>Volatile day-2 spike gets locked. Unlocked later drops. Opposite direction, same confusion risk.</div>
+      </div>
+
+      <div class="card">
+        <h2>Small moves (2 → 4 pattern from call)</h2>
+        <p>If partners compare unlocked across days 2 and 3 (not lock column), small changes are common:</p>
+        <table>
+          <thead><tr><th>pulse_account_id</th><th>Day 2 ARR</th><th>Day 3 ARR</th><th>Diff</th></tr></thead>
+          <tbody>
+            <tr><td class="num">35883170</td><td class="num">9.50</td><td class="num">19.41</td><td class="num">+9.91</td></tr>
+            <tr><td class="num">35953855</td><td class="num">4.31</td><td class="num">14.11</td><td class="num">+9.80</td></tr>
+            <tr><td class="num">35949941</td><td class="num">3.55</td><td class="num">13.27</td><td class="num">+9.72</td></tr>
+            <tr><td class="num">35852227</td><td class="num">3.53</td><td class="num">12.96</td><td class="num">+9.43</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="causes" class="section">
+      <div class="card">
+        <h2>Root cause assessment (ranked)</h2>
+        <table>
+          <thead><tr><th>#</th><th>Hypothesis</th><th>Likelihood</th><th>Evidence</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Export uses <code>PREDICTED_FIRST_ARR</code> (unlocked) instead of <code>_2_DAYS_LOCK</code></td>
+              <td><span class="pill bad">High</span></td>
+              <td>16% lock/unlocked divergence age 5+; entity examples show massive unlocked movement while lock stable</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>Full re-export includes entities in 0-2 day window (8x/day)</td>
+              <td><span class="pill bad">High</span></td>
+              <td>18.8% of July NI still in window; 20% day1→day2 movement</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>User-level DEP inherently noisy (model aggregate-accurate)</td>
+              <td><span class="pill warn">Medium</span></td>
+              <td>Confirmed on call; 541 payable flips between lock/unlocked</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Historical CM lock mutation</td>
+              <td><span class="pill warn">Low</span></td>
+              <td>Cannot verify (no time travel); current state looks correct</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td>Broken lock logic in CM/dbt</td>
+              <td><span class="pill ok">Unlikely</span></td>
+              <td>0 L3 rescores; 99.99% CM/L3 match today</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td>YoCcr / version migration</td>
+              <td><span class="pill ok">Unlikely</span></td>
+              <td>All recent NI day-2 scores are version 3</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Solution options</h2>
+        <h3>Tier 1 — Fix root cause</h3>
+        <ul>
+          <li>Audit Natowen export query: confirm <code>predicted_first_arr_2_days_lock</code> only</li>
+          <li>DS/BI daily QA: entities age&gt;3 where lock ≠ L3 day-2 (should be 0%)</li>
+        </ul>
+        <h3>Tier 2 — Partner reporting hardening (parallel)</h3>
+        <ul>
+          <li>Partner snapshot table at T+2 (immutable contractual value)</li>
+          <li>Append-only reporting: once reported, never revise DEP</li>
+          <li>Export filter: only entities age ≥ 3 days</li>
+        </ul>
+        <h3>Tier 3 — Commercial (Aug touch base)</h3>
+        <ul>
+          <li>Review 80/20 split (test 70/30 or 90/10)</li>
+          <li>Market-vector DEP (different audiences, different signals)</li>
+          <li>Cohort-level payment vs per-user precision</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="actions" class="section">
+      <div class="card">
+        <h2>Immediate next steps</h2>
+        <table>
+          <thead><tr><th>Action</th><th>Owner</th><th>When</th></tr></thead>
+          <tbody>
+            <tr><td>Get 3-5 user IDs from affiliates where lock changed post-day-2</td><td>Affiliates → Amit</td><td>Today</td></tr>
+            <tr><td>Audit Natowen export pipeline (which DEP column?)</td><td>Affiliates / BI</td><td>This week</td></tr>
+            <tr><td>Share findings with Dekel + Yoav Cohen (BI)</td><td>Amit</td><td>Today</td></tr>
+            <tr><td>Interim: export only age ≥ 3, append-only values</td><td>Affiliates</td><td>This week</td></tr>
+            <tr><td>Build <code>partner_dep_snapshot</code> table at T+2</td><td>BI / DS</td><td>2-3 weeks</td></tr>
+            <tr><td>Touch base: DEP model + supplier agreements (80/20, market vectors)</td><td>All + Yoav Cohen</td><td>Early Aug</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Slack draft (affiliates)</h2>
+        <p style="background:var(--bg);padding:14px;border-radius:8px;border:1px solid var(--border);font-size:0.86rem">
+          ran snowflake diagnostics on the dep 2-day lock issue. current warehouse state: lock column is frozen correctly for mature entities (cm lock = l3 day-2, 99.99% match on natowen). most likely cause is either the export using unlocked dep, or full re-exports mixing users still in the 0-2 day window (19% of july cohort). can't prove historical lock changes without time travel.<br><br>
+          need from you: 3-5 specific user IDs where you saw lock (not current dep) change after day 2. also confirming which column the natowen hourly export sends.<br><br>
+          interim fix we can do without ds: only export users age ≥ 3, append-only (never revise reported values).
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Data sources</h2>
+        <ul>
+          <li><code>BIGBRAIN.L3.FACT_CAMPAIGN_MONITORING_DWH</code> — partner-facing DEP lock columns</li>
+          <li><code>DATA_SCIENCE.L3.FACT_DYNAMIC_ENTITY_PREDICTIONS_DAILY</code> — entity-age DEP curve</li>
+          <li><code>DATA_SCIENCE.DATA_TOOLS_SOURCES.V_FACT_NEW_ENTITIES_FEATURES_DAILY</code> — source filter (natural_intelligence)</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tabs = document.querySelectorAll('nav button')
+    const sections = document.querySelectorAll('.section')
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'))
+        sections.forEach(s => s.classList.remove('active'))
+        btn.classList.add('active')
+        document.getElementById(btn.dataset.tab).classList.add('active')
+      })
+    })
+  </script>
+</body>
+</html>
