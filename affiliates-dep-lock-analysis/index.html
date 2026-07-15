@@ -165,7 +165,7 @@
       <div class="tldr">
         <h2>TL;DR</h2>
         <p>
-          Affiliates report daily DEP volatility after the 2-day lock window, blocking partner payments and campaign optimization (Natowen ~$1M-$1.5M/mo).
+          Affiliates report daily DEP volatility after the 2-day lock window, blocking partner payments and campaign optimization (Natural Intelligence ~$1M-$1.5M/mo).
           <b>Snowflake shows the lock column is frozen correctly today</b> for mature entities (CM lock = L3 day-2 score, 12,579/12,580 match).
           The most likely explanation is <b>partners seeing unlocked DEP</b> or <b>full re-exports mixing entities still in the 0-2 day lock window</b>, not a broken lock implementation.
           Cannot prove historical lock mutation (no CM time travel). Need affiliate user IDs + export pipeline audit to close.
@@ -182,7 +182,7 @@
       <div class="card" style="margin-top:20px">
         <h2>Issue context (from call)</h2>
         <ul>
-          <li>Partners (Natowen + others) receive DEP via daily reports, up to 8x/day. Each report re-exports all month-to-date events.</li>
+          <li>Partners (Natural Intelligence + others) receive DEP via daily reports, up to 8x/day. Each report re-exports all month-to-date events.</li>
           <li>Payment model: 80% fixed + 20% tied to DEP performance. Entities with <code>DEP &gt;= $18</code> are payable (cap $1,000).</li>
           <li>Field used: <code>PREDICTED_FIRST_ARR_2_DAYS_LOCK</code> (DEP2 lock). Partners expect it to freeze after 48h.</li>
           <li>Reported behavior: same user ID shows different DEP day-over-day after day 2 (e.g. DEP=2 on Jul 12, DEP=4 on Jul 13).</li>
@@ -219,7 +219,7 @@
           <thead><tr><th>Check</th><th>Result</th><th>Status</th></tr></thead>
           <tbody>
             <tr><td>L3: same entity rescored multiple times at days=2</td><td class="num">0 cases (60d, all channels)</td><td><span class="pill ok">Pass</span></td></tr>
-            <tr><td>CM lock vs L3 day-2 (Natowen, 30d)</td><td class="num">12,579 / 12,580 match (avg diff $0.01)</td><td><span class="pill ok">Pass</span></td></tr>
+            <tr><td>CM lock vs L3 day-2 (Natural Intelligence, 30d)</td><td class="num">12,579 / 12,580 match (avg diff $0.01)</td><td><span class="pill ok">Pass</span></td></tr>
             <tr><td>Entities age 3-4: CM lock = L3 day-2</td><td class="num">485 / 485</td><td><span class="pill ok">Pass</span></td></tr>
           </tbody>
         </table>
@@ -227,7 +227,7 @@
       </div>
 
       <div class="card">
-        <h2>B. Lock vs unlocked divergence (age 5+, Natowen, 30d)</h2>
+        <h2>B. Lock vs unlocked divergence (age 5+, Natural Intelligence, 30d)</h2>
         <div class="grid-3" style="margin-bottom:16px">
           <div class="stat"><div class="num">12,144</div><div class="lbl">Entities age 5+</div></div>
           <div class="stat"><div class="num ok">66%</div><div class="lbl">Lock within $1 of unlocked</div></div>
@@ -249,7 +249,7 @@
 
       <div class="card">
         <h2>C. Lock window still active (expected movement)</h2>
-        <h3>July Natowen cohort</h3>
+        <h3>July Natural Intelligence cohort</h3>
         <table>
           <thead><tr><th>Bucket</th><th>Count</th><th>%</th></tr></thead>
           <tbody>
@@ -278,7 +278,7 @@
           Cannot prove whether <code>PREDICTED_FIRST_ARR_2_DAYS_LOCK</code> changed 3 days ago vs today for the same entity on <code>FACT_CAMPAIGN_MONITORING_DWH</code>.
         </div>
         <div class="callout warn">
-          <div class="t">Natowen export pipeline not validated</div>
+          <div class="t">Natural Intelligence export pipeline not validated</div>
           Reconstructed query uses <code>predicted_first_arr_2_days_lock</code>. Actual hourly export to partners not confirmed in warehouse.
         </div>
       </div>
@@ -287,7 +287,7 @@
     <section id="examples" class="section">
       <div class="card">
         <h2>Entity 35710010 — lock stable, unlocked surged</h2>
-        <p><code>pulse_account_id</code> 35710010 · signup Jun 23, 2026 · Natowen</p>
+        <p><code>pulse_account_id</code> 35710010 · signup Jun 23, 2026 · Natural Intelligence</p>
         <table class="seq-table">
           <thead><tr><th>Entity age</th><th>L3 ARR (unlocked)</th><th>CM lock</th><th>Payable ($18)?</th></tr></thead>
           <tbody>
@@ -380,7 +380,7 @@
         <h2>Solution options</h2>
         <h3>Tier 1 — Fix root cause</h3>
         <ul>
-          <li>Audit Natowen export query: confirm <code>predicted_first_arr_2_days_lock</code> only</li>
+          <li>Audit Natural Intelligence export query: confirm <code>predicted_first_arr_2_days_lock</code> only</li>
           <li>DS/BI daily QA: entities age&gt;3 where lock ≠ L3 day-2 (should be 0%)</li>
         </ul>
         <h3>Tier 2 — Partner reporting hardening (parallel)</h3>
@@ -405,7 +405,7 @@
           <thead><tr><th>Action</th><th>Owner</th><th>When</th></tr></thead>
           <tbody>
             <tr><td>Get 3-5 user IDs from affiliates where lock changed post-day-2</td><td>Affiliates → Amit</td><td>Today</td></tr>
-            <tr><td>Audit Natowen export pipeline (which DEP column?)</td><td>Affiliates / BI</td><td>This week</td></tr>
+            <tr><td>Audit Natural Intelligence export pipeline (which DEP column?)</td><td>Affiliates / BI</td><td>This week</td></tr>
             <tr><td>Share findings with Dekel + Yoav Cohen (BI)</td><td>Amit</td><td>Today</td></tr>
             <tr><td>Interim: export only age ≥ 3, append-only values</td><td>Affiliates</td><td>This week</td></tr>
             <tr><td>Build <code>partner_dep_snapshot</code> table at T+2</td><td>BI / DS</td><td>2-3 weeks</td></tr>
@@ -417,18 +417,36 @@
       <div class="card">
         <h2>Slack draft (affiliates)</h2>
         <p style="background:var(--bg);padding:14px;border-radius:8px;border:1px solid var(--border);font-size:0.86rem">
-          ran snowflake diagnostics on the dep 2-day lock issue. current warehouse state: lock column is frozen correctly for mature entities (cm lock = l3 day-2, 99.99% match on natowen). most likely cause is either the export using unlocked dep, or full re-exports mixing users still in the 0-2 day window (19% of july cohort). can't prove historical lock changes without time travel.<br><br>
-          need from you: 3-5 specific user IDs where you saw lock (not current dep) change after day 2. also confirming which column the natowen hourly export sends.<br><br>
+          ran snowflake diagnostics on the dep 2-day lock issue. current warehouse state: lock column is frozen correctly for mature entities (cm lock = l3 day-2, 99.99% match on Natural Intelligence). most likely cause is either the export using unlocked dep, or full re-exports mixing users still in the 0-2 day window (19% of july cohort). can't prove historical lock changes without time travel.<br><br>
+          need from you: 3-5 specific user IDs where you saw lock (not current dep) change after day 2. also confirming which column the Natural Intelligence hourly export sends.<br><br>
           interim fix we can do without ds: only export users age ≥ 3, append-only (never revise reported values).
         </p>
       </div>
 
       <div class="card">
-        <h2>Data sources</h2>
+        <h2>Data provenance</h2>
+        <div class="callout ok" style="margin-top:0">
+          <div class="t">Real warehouse data (Snowflake, Jul 15 2026)</div>
+          All numbers in Findings and Examples tabs came from live queries against production tables. No mock entities, no synthetic cohorts, no illustrative charts with made-up values.
+        </div>
+        <table style="margin-top:14px">
+          <thead><tr><th>Content</th><th>Source</th><th>Verified?</th></tr></thead>
+          <tbody>
+            <tr><td>Lock stability stats (0 rescores, 12,579/12,580 match, etc.)</td><td>Snowflake queries on CM + L3</td><td><span class="pill ok">Yes</span></td></tr>
+            <tr><td>Entity examples (35710010, 35701246, day 2→3 samples)</td><td>Snowflake row-level pulls</td><td><span class="pill ok">Yes</span></td></tr>
+            <tr><td>July cohort lock-window split (18.8%, etc.)</td><td>Snowflake, <code>source = natural_intelligence</code></td><td><span class="pill ok">Yes</span></td></tr>
+            <tr><td>Payable threshold flips (541 entities)</td><td>Snowflake</td><td><span class="pill ok">Yes</span></td></tr>
+            <tr><td>CM time travel / historical lock mutation</td><td>Attempted; not available on CM table</td><td><span class="pill bad">Not tested</span></td></tr>
+            <tr><td>Natural Intelligence hourly export column</td><td>Not queried; reconstructed from internal SQL template only</td><td><span class="pill warn">Unverified</span></td></tr>
+            <tr><td>$1M-$1.5M/mo volume, 80/20 model, 8x/day reports</td><td>Jul 15 call transcript (affiliates team)</td><td><span class="pill warn">Not warehouse-validated</span></td></tr>
+            <tr><td>Root cause ranking, solution tiers, Slack draft</td><td>Analyst interpretation of query results + call</td><td><span class="pill warn">Judgment, not data</span></td></tr>
+          </tbody>
+        </table>
+        <h3>Tables queried</h3>
         <ul>
           <li><code>BIGBRAIN.L3.FACT_CAMPAIGN_MONITORING_DWH</code> — partner-facing DEP lock columns</li>
           <li><code>DATA_SCIENCE.L3.FACT_DYNAMIC_ENTITY_PREDICTIONS_DAILY</code> — entity-age DEP curve</li>
-          <li><code>DATA_SCIENCE.DATA_TOOLS_SOURCES.V_FACT_NEW_ENTITIES_FEATURES_DAILY</code> — source filter (natural_intelligence)</li>
+          <li><code>DATA_SCIENCE.DATA_TOOLS_SOURCES.V_FACT_NEW_ENTITIES_FEATURES_DAILY</code> — source filter (<code>natural_intelligence</code>)</li>
         </ul>
       </div>
     </section>
