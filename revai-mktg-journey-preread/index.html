@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketing Journey Context — RevAI Sync</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f7f8fa;
+      --surface: #fff;
+      --text: #323338;
+      --muted: #676879;
+      --border: #d0d4e4;
+      --accent: #5034ff;
+      --accent-soft: #ede9ff;
+      --warn: #c27803;
+      --warn-soft: #fff4e0;
+      --danger: #d83a52;
+      --danger-soft: #ffe6ea;
+      --ok: #00854d;
+      --ok-soft: #e6f4ed;
+      --radius: 10px;
+      --font: "Figtree", "Segoe UI", system-ui, sans-serif;
+      --mono: "SF Mono", "Fira Code", monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.55; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 32px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; }
+    header p { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+
+    nav {
+      display: flex; gap: 8px; padding: 14px 32px;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      position: sticky; top: 82px; z-index: 99; overflow-x: auto;
+    }
+    nav button {
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--muted); padding: 9px 16px; border-radius: 8px;
+      cursor: pointer; font-size: 0.88rem; font-weight: 600; white-space: nowrap;
+    }
+    nav button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 32px 80px; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .hero {
+      background: var(--accent-soft);
+      border: 1px solid #d4cbff;
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+    .hero h2 { font-size: 1.15rem; margin-bottom: 8px; }
+    .hero p { font-size: 0.95rem; color: var(--text); }
+
+    .big-num {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .big-num-label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px;
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 14px; }
+    .card h3 {
+      font-size: 0.72rem; color: var(--muted); font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+    }
+
+    .chart-wrap { position: relative; height: 280px; }
+    .chart-wrap.tall { height: 320px; }
+    .caption { font-size: 0.75rem; color: var(--muted); margin-top: 10px; }
+
+    .flow {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 20px; background: #fafbff; border-radius: var(--radius);
+      border: 1px solid var(--border); margin-bottom: 20px;
+    }
+    .flow-box {
+      padding: 12px 18px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 8px;
+      font-size: 0.85rem; font-weight: 600; text-align: center;
+    }
+    .flow-box.highlight { border-color: var(--accent); background: var(--accent-soft); }
+    .flow-arrow { color: var(--muted); font-size: 1.2rem; }
+
+    .enrich-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 80px 80px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+    .enrich-row:last-child { border-bottom: none; }
+    .enrich-bar-wrap {
+      height: 10px; background: #eef0f5; border-radius: 5px; overflow: hidden;
+    }
+    .enrich-bar { height: 100%; background: var(--accent); border-radius: 5px; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+    ul.discuss {
+      list-style: none; padding: 0;
+    }
+    ul.discuss li {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.92rem;
+    }
+    ul.discuss li:last-child { border-bottom: none; }
+
+    .insight {
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      margin-bottom: 14px;
+      font-size: 0.9rem;
+    }
+    .insight.warn { background: var(--warn-soft); border-left: 4px solid var(--warn); }
+    .insight.danger { background: var(--danger-soft); border-left: 4px solid var(--danger); }
+    .insight.ok { background: var(--ok-soft); border-left: 4px solid var(--ok); }
+
+    code {
+      font-family: var(--mono); font-size: 0.8rem;
+      background: #f0f1f5; padding: 2px 6px; border-radius: 4px;
+    }
+
+    .agent-toggle {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .agent-toggle button {
+      padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); cursor: pointer; font-weight: 600; font-size: 0.82rem;
+    }
+    .agent-toggle button.active {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+
+    @media (max-width: 800px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .enrich-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Marketing journey context for RevAI agents</h1>
+  <p>Snowflake POC · last 90 days · Amit Ram (MOPA)</p>
+</header>
+
+<nav id="nav">
+  <button type="button" class="active" data-section="opportunity">The opportunity</button>
+  <button type="button" data-section="enrichment">Enrichment size</button>
+  <button type="button" data-section="consumers">Who uses it</button>
+  <button type="button" data-section="signals">Early signals</button>
+  <button type="button" data-section="discuss">To discuss</button>
+</nav>
+
+<main>
+
+<!-- TAB 1: OPPORTUNITY -->
+<section id="opportunity" class="section active">
+
+  <div class="hero">
+    <h2>The gap Alex flagged is real, and the data already exists</h2>
+    <p>Jax and Amanda optimize on lead/account context today (signup prompt, SF profile, interactions). They don't see <strong>how the prospect arrived</strong>: keyword, campaign, landing page, channel. Campaign Monitoring (CM) has this for most leads. It's not wired into agent context yet.</p>
+  </div>
+
+  <div class="flow">
+    <div class="flow-box">Keyword / campaign / LP / banner</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box highlight">Campaign Monitoring</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box highlight">Agent context feed</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-box">Jax · Amanda · Oz</div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card" style="text-align:center">
+      <h3>Jax leads (90d)</h3>
+      <div class="big-num">7,426</div>
+      <div class="big-num-label">signup motion</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>Amanda leads (90d)</h3>
+      <div class="big-num">3,726</div>
+      <div class="big-num-label">contact sales motion</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <h3>CM-enrichable</h3>
+      <div class="big-num">~68%</div>
+      <div class="big-num-label">~7,600 leads / quarter</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <h2>One feed, three consumers</h2>
+    <p style="font-size:0.9rem; color:var(--muted); margin-bottom:14px;">Same marketing journey data. Different moment in the lifecycle.</p>
+    <div class="grid-3" style="gap:12px;">
+      <div style="padding:14px; background:#fafbff; border-radius:8px; font-size:0.85rem;">
+        <strong>Jax</strong><br>
+        <span style="color:var(--muted)">Trial day 0. Tailor messaging by LP/intent before first email.</span>
+      </div>
+      <div style="padding:14px; background:#fafbff; border-radius:8px; font-size:0.85rem;">
+        <strong>Amanda</strong><br>
+        <span style="color:var(--muted)">First call. Know if they came from branded search vs SEM vs agentic LP.</span>
+      </div>
+      <div style="padding:14px; background:#fafbff; border-radius:8px; font-size:0.85rem;">
+        <strong>Project Oz</strong><br>
+        <span style="color:var(--muted)">When account hits rep portfolio. Original acquisition intent as L3 context.</span>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- TAB 2: ENRICHMENT SIZE -->
+<section id="enrichment" class="section">
+
+  <div class="hero">
+    <h2>How big is the enrichment opportunity?</h2>
+    <p>Using <code>sf_lead_id</code> join to CM (<code>type='lead'</code>), we can attach marketing touchpoints to <strong>~7,600 agent leads per quarter</strong>. Below: how many leads get each field, and coverage by agent.</p>
+  </div>
+
+  <div class="grid-2" style="margin-bottom: 20px;">
+    <div class="card" style="text-align:center;">
+      <h3>Leads with any CM match</h3>
+      <div class="big-num">7,647</div>
+      <div class="big-num-label">of 11,152 total · 68.5%</div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <h3>Still no touchpoint</h3>
+      <div class="big-num" style="color:var(--muted); font-size:2.2rem;">3,505</div>
+      <div class="big-num-label">32% · in-product CS, offline, unattributed</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 20px;">
+    <h2>Enrichable leads by field (combined Jax + Amanda, 90d)</h2>
+    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:16px;">Absolute lead count that would receive each field if we pipe CM today</p>
+
+    <div class="enrich-row" style="font-weight:700; font-size:0.75rem; color:var(--muted); text-transform:uppercase;">
+      <div>Field</div><div>Coverage</div><div class="num">Leads</div><div class="num">%</div>
+    </div>
+    <div id="enrichRows"></div>
+  </div>
+
+  <div class="card">
+    <h2>Coverage by agent</h2>
+    <div class="agent-toggle">
+      <button type="button" class="active" data-agent="both">Both</button>
+      <button type="button" data-agent="jax">Jax only</button>
+      <button type="button" data-agent="amanda">Amanda only</button>
+    </div>
+    <div class="chart-wrap tall">
+      <canvas id="coverageChart"></canvas>
+    </div>
+    <p class="caption">% of all agent leads with field populated · Source: BIGBRAIN.L3.FACT_CAMPAIGN_MONITORING_DWH + L4.DIM_LEADS · last 90d</p>
+  </div>
+
+  <div class="insight ok" style="margin-top: 20px;">
+    <strong>Takeaway:</strong> channel + landing page + campaign are available for roughly half to two-thirds of all agent leads today. Keyword and banner are sparser (~35-40%) but high-value for SEM/Paid Social. We don't need 100% coverage to start.
+  </div>
+
+</section>
+
+<!-- TAB 3: CONSUMERS -->
+<section id="consumers" class="section">
+
+  <div class="hero">
+    <h2>What we'd pipe into agent context</h2>
+    <p>Proposed fields from CM. Technical join and storage TBD in discussion.</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h2>Fields from CM</h2>
+      <div style="display:grid; gap:8px; font-size:0.88rem;">
+        <div style="padding:10px 12px; background:#fafbff; border-radius:6px;"><code>grouped_channel</code> · SEM, Branded_search, Organic_SEO...</div>
+        <div style="padding:10px 12px; background:#fafbff; border-radius:6px;"><code>landing_page</code> · URL slug</div>
+        <div style="padding:10px 12px; background:#fafbff; border-radius:6px;"><code>campaign</code> · campaign name</div>
+        <div style="padding:10px 12px; background:#fafbff; border-radius:6px;"><code>keyword</code> · search term (SEM)</div>
+        <div style="padding:10px 12px; background:#fafbff; border-radius:6px;"><code>banner</code> · creative name</div>
+        <div style="padding:10px 12px; background:#fafbff; border-radius:6px;"><code>source</code> · ad platform</div>
+        <div style="padding:10px 12px; background:#fafbff; border-radius:6px;"><code>intent_theme</code> · derived: agentic / ai / crm / wm / other</div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Proposed join (starting point)</h2>
+      <p style="font-size:0.88rem; margin-bottom:12px;">
+        <code>DIM_LEADS.lead_id = CM.sf_lead_id</code><br>
+        where <code>CM.type = 'lead'</code>
+      </p>
+      <p style="font-size:0.85rem; color:var(--muted); margin-bottom:16px;">
+        Fallback when no match: <code>no_touchpoint_available</code>
+      </p>
+      <h2 style="margin-top:20px;">Amy precedent</h2>
+      <p style="font-size:0.85rem; color:var(--muted);">
+        Website agent Amy already gets UTM + page journey via Qualified enrichment. Same pattern: marketing data lands in agent context before conversation/plan generation.
+      </p>
+    </div>
+  </div>
+
+</section>
+
+<!-- TAB 4: SIGNALS -->
+<section id="signals" class="section">
+
+  <div class="hero">
+    <h2>Three early signals from the data</h2>
+    <p>Directional findings to frame the discussion. Not conclusions.</p>
+  </div>
+
+  <div class="insight danger">
+    <strong>1. Agentic traffic reaches Jax blind</strong><br>
+    315 Jax leads (90d) from AI/Agent landing pages. 0% opp conversion. Jax can't differentiate messaging because it only sees <code>signup_prompt</code>, not the LP or campaign.
+  </div>
+
+  <div class="insight warn">
+    <strong>2. Amanda meeting→opp is declining</strong><br>
+    61% (Jan) → 41% (Jun) → 26% (Jul partial). CM match doesn't explain it. Journey context may help qualification; the drop likely needs a separate RevAI ops look.
+  </div>
+
+  <div class="insight ok">
+    <strong>3. High-intent keywords convert well for Amanda</strong><br>
+    "monday crm" (116 leads): 63% meeting, 33% opp. If Amanda knew the keyword before the call, she could lean into CRM positioning earlier.
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <h2>Jax: conversion by landing page theme</h2>
+    <div class="chart-wrap tall">
+      <canvas id="jaxLpChart"></canvas>
+    </div>
+    <p class="caption">Lead volume by LP theme · sf_lead_id join · last 90d. AI/Agent LP highlighted.</p>
+  </div>
+
+</section>
+
+<!-- TAB 5: DISCUSS -->
+<section id="discuss" class="section">
+
+  <div class="hero">
+    <h2>Open questions</h2>
+    <p>Technical details intentionally light. These are the decisions we need from this group.</p>
+  </div>
+
+  <div class="card">
+    <ul class="discuss">
+      <li><strong>Shared feed or separate builds?</strong> One Snowflake view for Jax, Amanda, and Oz - or three integrations?</li>
+      <li><strong>Where does context land in each agent?</strong> Jax plan "Strategic Intent"? Amanda pre-call brief? Oz L3 account context?</li>
+      <li><strong>Lead-attached vs account-persisted?</strong> When an Amanda lead becomes an opp in a rep's portfolio, does Oz inherit the original marketing context?</li>
+      <li><strong>Who builds the feed?</strong> MOPA Snowflake view → RevAI context table? Or dev touchpoint pipeline?</li>
+      <li><strong>Is Amanda's meeting→opp drop a separate track?</strong> Journey context helps personalization; the decline may be qualification/routing.</li>
+      <li><strong>Agentic LP playbook?</strong> 315 leads/qtr with no opp and no differentiated Jax messaging. Data feed + playbook - together or separate?</li>
+    </ul>
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <h2>Methodology (if asked)</h2>
+    <p style="font-size:0.85rem; color:var(--muted);">
+      Agent leads: <code>BIGBRAIN.L4.DIM_LEADS</code> · filter <code>business_received_owner_role IN ('Jax Agent', 'Amanda Agent')</code><br>
+      Touchpoints: <code>BIGBRAIN.L3.FACT_CAMPAIGN_MONITORING_DWH</code> · <code>type='lead'</code><br>
+      SQL: <code>revai-journey-analysis/queries/revai_agent_marketing_journey_poc.sql</code>
+    </p>
+  </div>
+
+</section>
+
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const DATA = {
+    totals: { jax: 7426, amanda: 3726, combined: 11152, matched: 7647 },
+    fields: [
+      { name: 'grouped_channel', jaxPct: 68.8, amandaPct: 68.1 },
+      { name: 'landing_page', jaxPct: 62.7, amandaPct: 52.1 },
+      { name: 'campaign', jaxPct: 52.1, amandaPct: 45.7 },
+      { name: 'source', jaxPct: 68.2, amandaPct: 56.5 },
+      { name: 'banner', jaxPct: 37.4, amandaPct: 39.3 },
+      { name: 'keyword', jaxPct: 33.3, amandaPct: 34.6 },
+      { name: 'medium', jaxPct: 49.6, amandaPct: 45.1 },
+    ],
+    jaxLp: [
+      { theme: 'Other LP', leads: 2013 },
+      { theme: 'Homepage / Brand', leads: 1316 },
+      { theme: 'WM / PM LP', leads: 752 },
+      { theme: 'AI / Agent LP', leads: 315, highlight: true },
+      { theme: 'CRM LP', leads: 207 },
+      { theme: 'Pricing', leads: 51 },
+    ],
+  }
+
+  let coverageChart = null
+  let jaxLpChart = null
+  let coverageAgent = 'both'
+  const chartsReady = typeof Chart !== 'undefined'
+
+  // Enrichment rows
+  const enrichContainer = document.getElementById('enrichRows')
+  if (enrichContainer) {
+    enrichContainer.innerHTML = DATA.fields.map(f => {
+      const jaxN = Math.round(DATA.totals.jax * f.jaxPct / 100)
+      const amandaN = Math.round(DATA.totals.amanda * f.amandaPct / 100)
+      const total = jaxN + amandaN
+      const pct = (total / DATA.totals.combined * 100).toFixed(1)
+      const barW = Math.min(100, pct * 1.4)
+      return `
+        <div class="enrich-row">
+          <div><code>${f.name}</code></div>
+          <div class="enrich-bar-wrap"><div class="enrich-bar" style="width:${barW}%"></div></div>
+          <div class="num">${total.toLocaleString()}</div>
+          <div class="num">${pct}%</div>
+        </div>`
+    }).join('')
+  }
+
+  // Tab navigation
+  document.querySelectorAll('#nav button[data-section]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sectionId = btn.dataset.section
+      document.querySelectorAll('#nav button').forEach(b => b.classList.remove('active'))
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+      btn.classList.add('active')
+      document.getElementById(sectionId).classList.add('active')
+      if (sectionId === 'enrichment') requestAnimationFrame(() => refreshCoverageChart())
+      if (sectionId === 'signals') requestAnimationFrame(() => initJaxLpChart())
+    })
+  })
+
+  // Agent toggle
+  document.querySelectorAll('.agent-toggle button[data-agent]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.agent-toggle button').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+      coverageAgent = btn.dataset.agent
+      refreshCoverageChart()
+    })
+  })
+
+  const getCoverageValues = (agent) => {
+    if (agent === 'jax') return DATA.fields.map(f => f.jaxPct)
+    if (agent === 'amanda') return DATA.fields.map(f => f.amandaPct)
+    return DATA.fields.map(f =>
+      Number(((f.jaxPct * DATA.totals.jax + f.amandaPct * DATA.totals.amanda) / DATA.totals.combined).toFixed(1))
+    )
+  }
+
+  const initCoverageChart = () => {
+    if (!chartsReady || coverageChart) return
+    const canvas = document.getElementById('coverageChart')
+    if (!canvas) return
+    coverageChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: DATA.fields.map(f => f.name.replace('_', ' ')),
+        datasets: [{ label: '% of agent leads', data: getCoverageValues(coverageAgent), backgroundColor: '#5034ff' }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        scales: {
+          x: { max: 100, title: { display: true, text: '% of leads with field' } },
+          y: { grid: { display: false } },
+        },
+        plugins: { legend: { display: false } },
+      },
+    })
+  }
+
+  const initJaxLpChart = () => {
+    if (!chartsReady || jaxLpChart) return
+    const canvas = document.getElementById('jaxLpChart')
+    if (!canvas) return
+    jaxLpChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: DATA.jaxLp.map(d => d.theme),
+        datasets: [{
+          label: 'Leads (90d)',
+          data: DATA.jaxLp.map(d => d.leads),
+          backgroundColor: DATA.jaxLp.map(d => d.highlight ? '#d83a52' : '#5034ff'),
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        scales: {
+          x: { title: { display: true, text: 'Lead count' } },
+          y: { grid: { display: false } },
+        },
+        plugins: { legend: { display: false } },
+      },
+    })
+  }
+
+  const refreshCoverageChart = () => {
+    if (!chartsReady) return
+    if (!coverageChart) {
+      initCoverageChart()
+      return
+    }
+    coverageChart.data.datasets[0].data = getCoverageValues(coverageAgent)
+    coverageChart.update()
+  }
+})
+</script>
+</body>
+</html>
